@@ -1,13 +1,22 @@
 const express = require('express');
+var bodyParser = require('body-parser')
+const cors = require('cors');
 const app = express();
-const bodyParser = require("body-parser");
 const nodemailer = require("nodemailer");
 require('dotenv').config();
 
 // Serve only the static files form the dist directory
-app.use(express.static(__dirname + '/dist/hsapp'));
+app.use(express.static(__dirname + '/dist/petsitter'));
 
-app.use(bodyParser.json());
+// parse application/x-www-form-urlencoded
+app.use(bodyParser.urlencoded({ extended: false }))
+
+// parse application/json
+app.use(bodyParser.json())
+
+if (process.env.NODE_ENV !== 'production') {
+    app.use(cors());
+}
 
 // define a sendmail endpoint, which will send emails and response with the corresponding status
 app.post("/api/sendRequest2", (req, res) => {
@@ -21,8 +30,11 @@ app.post("/api/sendRequest2", (req, res) => {
 
 app.post("/api/sendRequest", (req, res) => {
     console.log("request came");
-    let user = req.body;
-    sendMail(user, (err, info) => {
+    let bookingRequest = req.body;
+
+    console.log(bookingRequest);
+
+    sendMail(bookingRequest, (err, info) => {
         if (err) {
             console.log(err);
             res.status(400);
@@ -35,20 +47,26 @@ app.post("/api/sendRequest", (req, res) => {
     });
 });
 
-const sendMail = (user, callback) => {
+const sendMail = (bookingRequest, callback) => {
+
+    var html = '<p>Name: ' + bookingRequest.name + '</p>';
+    html += '<p>Email: ' + bookingRequest.email + '</p>';
+    html += '<p>Phone: ' + bookingRequest.phone + '</p>';
+    html += '<p>Message: ' + bookingRequest.message + '</p>';
+
     const mailOptions = {
         from: process.env.USER_EMAIL,
-        to: user.toMail,
-        cc: user.ccMail,
-        subject: user.subject,
-        html: user.html
+        to: process.env.USER_EMAIL,
+        // cc: user.ccMail,
+        subject: 'Booking request: ' + bookingRequest.name,
+        html: html
     };
-    if (user.file !== null && user.file !== undefined) {
-        mailOptions.attachments = [{
-            filename: user.fileName,
-            path: user.file
-        }]
-    }
+    // if (bookingRequest.file !== null && bookingRequest.file !== undefined) {
+    //     mailOptions.attachments = [{
+    //         filename: bookingRequest.fileName,
+    //         path: bookingRequest.file
+    //     }]
+    // }
     const transporter = nodemailer.createTransport({
         host: "smtp.gmail.com",
         port: 587,
